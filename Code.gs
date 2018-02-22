@@ -24,8 +24,8 @@
 
 function onOpen(e) {
   SpreadsheetApp.getUi().createAddonMenu()
-      .addItem('Start STT', 'showSidebar')
-      .addToUi();
+    .addItem('Start STT', 'showSidebar')
+    .addToUi();
 }
 
 function onInstall(e) {
@@ -34,21 +34,21 @@ function onInstall(e) {
 
 function showSidebar() {
   var ui = HtmlService.createHtmlOutputFromFile('Sidebar')
-      .setTitle('STT Crew loader');
+    .setTitle('STT Crew loader');
   SpreadsheetApp.getUi().showSidebar(ui);
 }
 
 function getPreferences() {
   var userProperties = PropertiesService.getUserProperties();
-  return {accessToken: userProperties.getProperty('accessToken'), name: userProperties.getProperty('name')};
+  return { accessToken: userProperties.getProperty('accessToken'), name: userProperties.getProperty('name') };
 }
 
 function login(username, password) {
   var data = 'username=' + username + '&password=' + password + '&client_id=4fc852d7-d602-476a-a292-d243022a475d&grant_type=password';
 
   var options = {
-   'method' : 'post',
-   'payload' : data
+    'method': 'post',
+    'payload': data
   };
 
   var response = UrlFetchApp.fetch('https://thorium.disruptorbeam.com/oauth2/token', options);
@@ -56,10 +56,10 @@ function login(username, password) {
 }
 
 function loadCrew(access_token) {
-  var response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/player?client_api=8&access_token=' + access_token);
+  var response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/player?client_api=9&access_token=' + access_token);
   var playerData = JSON.parse(response.getContentText());
 
-  response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/character/get_avatar_crew_archetypes?client_api=8&access_token=' + access_token);
+  response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/character/get_avatar_crew_archetypes?client_api=9&access_token=' + access_token);
   var crewArchetypes = JSON.parse(response.getContentText());
 
   var result = {
@@ -77,7 +77,7 @@ function loadCrew(access_token) {
 
   result.crew = new Object();
   crewArchetypes.crew_avatars.forEach(function (av) {
-    result.crew[av.id] = {name: av.name, short_name: av.short_name, max_rarity: av.max_rarity, have: false, airlocked: false, immortal: 0};
+    result.crew[av.id] = { name: av.name, short_name: av.short_name, max_rarity: av.max_rarity, have: false, airlocked: false, immortal: 0 };
   });
 
   crewArchetypes = undefined;
@@ -125,12 +125,12 @@ function loadCrew(access_token) {
   };
 
   var RARITYCOLORS = [
-    { b : '', f: '' }, // Basic
-    { b : '#9b9b9b', f: '#080808' }, // Common
-    { b : '#50aa3c', f: '#963caa' }, // Uncommon
-    { b : '#5aaaff', f: '#ffaf5a' }, // Rare
-    { b : '#aa2deb', f: '#6eeb2d' }, // Super Rare
-    { b : '#fdd26a', f: '#6a95fd' } // Legendary
+    { b: '', f: '' }, // Basic
+    { b: '#9b9b9b', f: '#080808' }, // Common
+    { b: '#50aa3c', f: '#963caa' }, // Uncommon
+    { b: '#5aaaff', f: '#ffaf5a' }, // Rare
+    { b: '#aa2deb', f: '#6eeb2d' }, // Super Rare
+    { b: '#fdd26a', f: '#6a95fd' } // Legendary
   ];
 
   var colIndex = 7;
@@ -146,11 +146,13 @@ function loadCrew(access_token) {
     colIndex = colIndex + 3;
   }
 
+  var crewArray = [];
+
   for (var crewId in result.crew) {
     var crew = result.crew[crewId];
 
     if (crew.have) {
-      sheet.appendRow([
+      crewArray.push([
         crew.name,
         'Yes',
         crew.rarity,
@@ -179,26 +181,30 @@ function loadCrew(access_token) {
       ]);
     } else {
       if (crew.immortal > 0) {
-        sheet.appendRow([
+        crewArray.push([
           crew.name,
           'Vault',
           crew.max_rarity,
-          crew.max_rarity
+          crew.max_rarity, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
         ]);
       } else {
-         sheet.appendRow([
-            crew.name,
-            'No',
-            0,
-            crew.max_rarity
-          ]);
+        crewArray.push([
+          crew.name,
+          'No',
+          0,
+          crew.max_rarity, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+        ]);
       }
     }
-    
-    var rangeRarity = sheet.getRange(sheet.getLastRow(), 3, 1, 2);
-    rangeRarity.setBackground(RARITYCOLORS[crew.max_rarity].b);
+
+    //var rangeRarity = sheet.getRange(sheet.getLastRow(), 3, 1, 2);
+    //rangeRarity.setBackground(RARITYCOLORS[crew.max_rarity].b);
     //rangeRarity.setFontColor(RARITYCOLORS[crew.max_rarity].f);
   }
+
+  sheet.insertRows(3, crewArray.length);
+  var crewRange = sheet.getRange(3, 1, crewArray.length, 25);
+  crewRange.setValues(crewArray);
 
   // Freeze the first 2 rows
   sheet.setFrozenRows(2);
@@ -215,7 +221,7 @@ function loadCrew(access_token) {
   colIndex = 7;
   for (var i = 0; i < 7; i++) {
     var range = sheet.getRange(1, colIndex, sheet.getLastRow());
-    range.setBorder(null, true, null, null, false, false, null, null); // SpreadsheetApp.BorderStyle.SOLID_THICK);
+    range.setBorder(null, true, null, null, false, false, null, null);
     colIndex = colIndex + 3;
   }
 
@@ -230,7 +236,7 @@ function loadCadetMissionData(cadetMissions, access_token) {
     missionIds = missionIds + 'ids[]=' + missionId + '&';
   });
 
-  var response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/mission/info?' + missionIds + 'client_api=8&access_token=' + access_token);
+  var response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/mission/info?' + missionIds + 'client_api=9&access_token=' + access_token);
   var missionData = JSON.parse(response.getContentText());
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -263,10 +269,12 @@ function loadCadetMissionData(cadetMissions, access_token) {
     return 'Unclaimed (' + challenge.critical.threshold + ')';
   }
 
+  var questArray = [];
+
   missionData.character.accepted_missions.forEach(function (mission) {
     mission.quests.forEach(function (quest) {
       if (quest.quest_type == 'ConflictQuest') {
-        response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/quest/conflict_info?id=' + quest.id + '&client_api=8&access_token=' + access_token);
+        response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/quest/conflict_info?id=' + quest.id + '&client_api=9&access_token=' + access_token);
         var questData = JSON.parse(response.getContentText());
         questData.challenges.forEach(function (challenge) {
           var traits = [];
@@ -276,7 +284,7 @@ function loadCadetMissionData(cadetMissions, access_token) {
             traits.push(traitBonus.trait);
           });
 
-          sheet.appendRow([
+          questArray.push([
             mission.episode_title,
             questData.name,
             challenge.name,
@@ -290,14 +298,18 @@ function loadCadetMissionData(cadetMissions, access_token) {
             questData.crew_requirement.traits ? questData.crew_requirement.traits.join(', ') : ''
           ]);
 
-          if (challenge.critical && challenge.critical.claimed == false) {
+          /*if (challenge.critical && challenge.critical.claimed == false) {
             var rangeCrit = sheet.getRange(sheet.getLastRow(), 6);
             rangeCrit.setBackground('red');
-          }
+          }*/
         });
       }
     });
   });
+
+  sheet.insertRows(3, questArray.length);
+  var questRange = sheet.getRange(2, 1, questArray.length, 11);
+  questRange.setValues(questArray);
 
   // Freeze the first row
   sheet.setFrozenRows(1);

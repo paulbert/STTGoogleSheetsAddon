@@ -1,151 +1,170 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
-    <!-- The CSS package above applies Google styling to buttons and other elements. -->
-  </head>
-  <body>
-    <div class="sidebar branding-below">
-      <form>
-        <div class="block">
-            <img src="http://www.startrek.com/uploads/assets/articles/0101c2c0629feb7c98c745a5bbafcbf422c2769c.png" style="width:100%" />
 
-            <div id="user-name-div">
-              <label for="user-name">Username</label>
-              <input type="text" name="name" id="user-name" value="">
-            </div>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+  <!-- The CSS package above applies Google styling to buttons and other elements. -->
+</head>
 
-            <div id="user-password-div">
-              <label for="user-password">Password</label>
-              <input type="password" name="password" id="user-password" value="">
-            </div>
+<body>
+  <div class="sidebar branding-below">
+    <div class="block">
+      <img src="http://www.startrek.com/uploads/assets/articles/0101c2c0629feb7c98c745a5bbafcbf422c2769c.png" style="width:100%" />
 
-            <input type="hidden" name="accessToken" id="user-accessToken" value=""><br/>
+      <div id="user-name-div">
+        <label for="user-name">Username</label>
+        <input type="text" name="name" id="user-name" value="">
+      </div>
 
-            <div class="block" id="button-bar">
-              <button class="blue" id="login-btn">Login</button>
-              <button class="blue" id="load-crew">Load crew</button>
-              <button class="blue" id="load-cadet">Load cadet missions</button>
-            </div>
-        </div>
-      </form>
+      <div id="user-password-div">
+        <label for="user-password">Password</label>
+        <input type="password" name="password" id="user-password" value="">
+      </div>
+
+      <input type="hidden" name="accessToken" id="user-accessToken" value="">
+
+      <br/>
+
+      <div class="block" id="button-bar">
+        <button class="blue" id="login-btn">Login</button>
+        <button class="blue" id="logout-btn">Logout</button>
+        <button class="blue" id="load-crew">Load crew</button>
+        <button class="blue" id="load-cadet">Load cadet missions</button>
+      </div>
     </div>
+  </div>
 
-    <div class="sidebar bottom">
-      <span class="gray branding-text">STT crew sheet by <a href='https://iampicard.github.io/'>IAmPicard</a></span>
-      <div class="small">This tool is provided "as is", without warranty of any kind. Use at your own risk! Star Trek Timelines content and materials are trademarks and copyrights of Disruptor Beam, Inc. or its licensors. All rights reserved. This tool is neither endorsed by nor affiliated with Disruptor Beam, Inc.</div>
-    </div>
+  <div class="sidebar bottom">
+    <span class="gray branding-text">STT crew sheet by
+      <a href='https://iampicard.github.io/'>IAmPicard</a>
+    </span>
+    <div class="small">This tool is provided "as is", without warranty of any kind. Use at your own risk! Star Trek Timelines content and materials
+      are trademarks and copyrights of Disruptor Beam, Inc. or its licensors. All rights reserved. This tool is neither endorsed
+      by nor affiliated with Disruptor Beam, Inc.</div>
+  </div>
 
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js">
-    </script>
-    <script>
-      /**
-       * On document load, assign click handlers to each button and try to load the
-       * user's acces token and name preferences if previously set.
-       */
-      $(function() {
-        $('#login-btn').click(login);
-        $('#load-crew').click(loadCrew);
-        $('#load-cadet').click(loadCadet);
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js">
+  </script>
+  <script>
+    /**
+     * On document load, assign click handlers to each button and try to load the
+     * user's acces token and name preferences if previously set.
+     */
+    $(function () {
+      $('#login-btn').click(login);
+      $('#logout-btn').click(logout);
+      $('#load-crew').click(loadCrew);
+      $('#load-cadet').click(loadCadet);
 
-        $('#load-crew').hide();
-        $('#load-cadet').hide();
-        $('#login-btn').show();
+      $('#load-crew').hide();
+      $('#load-cadet').hide();
+      $('#login-btn').show();
+      $('#logout-btn').hide();
 
-        google.script.run.withSuccessHandler(loadPreferences)
-            .withFailureHandler(showError).getPreferences();
-      });
-      
-      var cadetMissionIds = undefined;
+      google.script.run.withSuccessHandler(loadPreferences)
+        .withFailureHandler(showError).getPreferences();
+    });
 
-      function loadPreferences(prefs) {
-        if (prefs.accessToken) {
-          showInfo("Welcome back, " + prefs.name + ". Click 'Load crew' to (re)populate the sheet!", $('#button-bar'));
-          $('#user-accessToken').val(prefs.accessToken);
-          $('#load-crew').show();
-          $('#login-btn').hide();
-          $('#user-name-div').hide();
-          $('#user-password-div').hide();
-        }
+    var cadetMissionIds = undefined;
+
+    function loadPreferences(prefs) {
+      if (prefs.accessToken) {
+        showInfo("Welcome back, " + prefs.name + ". Click 'Load crew' to (re)populate the sheet!", $('#button-bar'));
+        $('#logout-btn').show();
+        $('#user-accessToken').val(prefs.accessToken);
+        $('#load-crew').show();
+        $('#login-btn').hide();
+        $('#user-name-div').hide();
+        $('#user-password-div').hide();
       }
+    }
 
-      function login() {
-        this.disabled = true;
-        $('#error').remove();
-        $('#info').remove();
-        var user = $('#user-name').val();
-        var pass = $('#user-password').val();
-        google.script.run
-            .withSuccessHandler(
-              function(loginResult, element) {
-                showInfo("Login successful. Click 'Load crew' to populate the sheet!", $('#button-bar'));
-                $('#user-accessToken').val(loginResult.access_token);
-                $('#load-crew').show();
-                $('#login-btn').hide();
-                $('#user-name-div').hide();
-                $('#user-password-div').hide();
-                element.disabled = false;
-              })
-            .withFailureHandler(
-              function(msg, element) {
-                showError(msg, $('#button-bar'));
-                element.disabled = false;
-              })
-            .withUserObject(this)
-            .login(user, pass);
-      }
+    function logout() {
+      $('#user-name-div').show();
+      $('#user-password-div').show();
+      $('#login-btn').show();
+      $('#load-crew').hide();
+      $('#logout-btn').hide();
+    }
 
-      function loadCrew() {
-        this.disabled = true;
-        $('#error').remove();
-        $('#info').remove();
-        google.script.run
-            .withSuccessHandler(
-              function(playerData, element) {
-                showInfo("Hi, " + playerData.name + "! Your crew roster is now loaded", $('#button-bar'));
-                cadetMissionIds = playerData.cadetMissions;
-                $('#load-cadet').show();
-                element.disabled = false;
-              })
-            .withFailureHandler(
-              function(msg, element) {
-                showError(msg, $('#button-bar'));
-                element.disabled = false;
-              })
-            .withUserObject(this)
-            .loadCrew($('#user-accessToken').val());
-      }
-      
-      function loadCadet() {
-        this.disabled = true;
-        $('#error').remove();
-        $('#info').remove();
-        google.script.run
-            .withSuccessHandler(
-              function(msg, element) {
-                showInfo("Cadet missions have finished loading", $('#button-bar'));
-                element.disabled = false;
-              })
-            .withFailureHandler(
-              function(msg, element) {
-                showError(msg, $('#button-bar'));
-                element.disabled = false;
-              })
-            .withUserObject(this)
-            .loadCadetMissionData(cadetMissionIds, $('#user-accessToken').val());
-      }
+    function login() {
+      this.disabled = true;
+      $('#error').remove();
+      $('#info').remove();
+      var user = $('#user-name').val();
+      var pass = $('#user-password').val();
+      google.script.run
+        .withSuccessHandler(
+          function (loginResult, element) {
+            showInfo("Login successful. Click 'Load crew' to populate the sheet!", $('#button-bar'));
+            $('#user-accessToken').val(loginResult.access_token);
+            $('#load-crew').show();
+            $('#login-btn').hide();
+            $('#user-name-div').hide();
+            $('#user-password-div').hide();
+            element.disabled = false;
+          })
+        .withFailureHandler(
+          function (msg, element) {
+            showError(msg, $('#button-bar'));
+            element.disabled = false;
+          })
+        .withUserObject(this)
+        .login(user, pass);
+    }
 
-      function showError(msg, element) {
-        var div = $('<div id="error" class="error">' + msg + '</div>');
-        $(element).after(div);
-      }
+    function loadCrew() {
+      this.disabled = true;
+      $('#error').remove();
+      $('#info').remove();
+      google.script.run
+        .withSuccessHandler(
+          function (playerData, element) {
+            showInfo("Hi, " + playerData.name + "! Your crew roster is now loaded", $('#button-bar'));
+            cadetMissionIds = playerData.cadetMissions;
+            $('#load-cadet').show();
+            element.disabled = false;
+          })
+        .withFailureHandler(
+          function (msg, element) {
+            showError(msg, $('#button-bar'));
+            element.disabled = false;
+          })
+        .withUserObject(this)
+        .loadCrew($('#user-accessToken').val());
+    }
 
-      function showInfo(msg, element) {
-        var div = $('<div id="info" class="info">' + msg + '</div>');
-        $(element).after(div);
-      }
-    </script>
+    function loadCadet() {
+      this.disabled = true;
+      $('#error').remove();
+      $('#info').remove();
+      google.script.run
+        .withSuccessHandler(
+          function (msg, element) {
+            showInfo("Cadet missions have finished loading", $('#button-bar'));
+            element.disabled = false;
+          })
+        .withFailureHandler(
+          function (msg, element) {
+            showError(msg, $('#button-bar'));
+            element.disabled = false;
+          })
+        .withUserObject(this)
+        .loadCadetMissionData(cadetMissionIds, $('#user-accessToken').val());
+    }
 
-  </body>
+    function showError(msg, element) {
+      var div = $('<div id="error" class="error">' + msg + '</div>');
+      $(element).after(div);
+    }
+
+    function showInfo(msg, element) {
+      var div = $('<div id="info" class="info">' + msg + '</div>');
+      $(element).after(div);
+    }
+  </script>
+
+</body>
+
 </html>
