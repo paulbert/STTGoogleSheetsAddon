@@ -56,11 +56,14 @@ function login(username, password) {
 }
 
 function loadCrew(access_token) {
-  var response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/player?client_api=9&access_token=' + access_token);
+  var apiDomain = 'https://stt.disruptorbeam.com/';
+  var apiQueryString = '?client_api=9&access_token=' + access_token;
+  var response = UrlFetchApp.fetch(apiDomain + 'player' + apiQueryString);
   var playerData = JSON.parse(response.getContentText());
 
-  response = UrlFetchApp.fetch('https://stt.disruptorbeam.com/character/get_avatar_crew_archetypes?client_api=9&access_token=' + access_token);
-  var crewArchetypes = JSON.parse(response.getContentText());
+  response = UrlFetchApp.fetch(apiDomain + 'character/get_avatar_crew_archetypes' + apiQueryString);
+  var crewArchetypes = JSON.parse(response.getContentText());  
+  var immortals = [];
 
   var result = {
     vipLevel: playerData.player.vip_level,
@@ -79,27 +82,49 @@ function loadCrew(access_token) {
   crewArchetypes.crew_avatars.forEach(function (av) {
     result.crew[av.id] = { name: av.name, short_name: av.short_name, max_rarity: av.max_rarity, have: false, airlocked: false, immortal: 0 };
   });
+  
+  function findCrewById (id, fullCrewList) {
+    return fullCrewList.filter(function (crew) {
+      return crew.id === id;
+    });
+  }
+  
+  function getImmortalInfo (crew) {
+    var symbol = findCrewById(crew.id, crewArchetypes.crew_avatars)[0].symbol,
+        data = { 'symbol': symbol, 'access_token': access_token },
+        options = { 'method': 'post',
+                   'contentType': 'application/json',
+                   'payload': JSON.stringify(data) };
+    var res = UrlFetchApp.fetch(apiDomain + 'stasis_vault/immortal_restore_info', options);
+    return JSON.parse(res.getContentText()).crew;
+  }
+  
+  // haveState is 'Yes' for in roster, 'Vaulted' for immortals
+  function appendCrewData (haveState) {
+    // returns a function as a parameter for forEach
+    return function (crew) {
+      result.crew[crew.archetype_id].have = true;
+      result.crew[crew.archetype_id].haveState = haveState;
+      result.crew[crew.archetype_id].flavor = crew.flavor;
+      result.crew[crew.archetype_id].level = crew.level;
+      result.crew[crew.archetype_id].rarity = crew.rarity;
+      result.crew[crew.archetype_id].traits = crew.traits;
+      result.crew[crew.archetype_id].traits_hidden = crew.traits_hidden;
+      result.crew[crew.archetype_id].skills = crew.skills;
+      result.crew[crew.archetype_id].ship_battle = crew.ship_battle;
+      result.crew[crew.archetype_id].equipment = crew.equipment.length;
+      result.crew[crew.archetype_id].favorite = crew.favorite;
+      result.crew[crew.archetype_id].airlocked = crew.in_buy_back_state;
+    }
+  }
+  
+  immortals = playerData.player.character.stored_immortals.map(getImmortalInfo);
 
   crewArchetypes = undefined;
-
-  playerData.player.character.crew.forEach(function (crew) {
-    result.crew[crew.archetype_id].have = true;
-    result.crew[crew.archetype_id].flavor = crew.flavor;
-    result.crew[crew.archetype_id].level = crew.level;
-    result.crew[crew.archetype_id].rarity = crew.rarity;
-    result.crew[crew.archetype_id].traits = crew.traits;
-    result.crew[crew.archetype_id].traits_hidden = crew.traits_hidden;
-    result.crew[crew.archetype_id].skills = crew.skills;
-    result.crew[crew.archetype_id].ship_battle = crew.ship_battle;
-    result.crew[crew.archetype_id].equipment = crew.equipment.length;
-    result.crew[crew.archetype_id].favorite = crew.favorite;
-    result.crew[crew.archetype_id].airlocked = crew.in_buy_back_state;
-  });
-
-  playerData.player.character.stored_immortals.forEach(function (imm) {
-    result.crew[imm.id].immortal = imm.quantity;
-  });
-
+  
+  playerData.player.character.crew.forEach(appendCrewData('Yes'));
+  immortals.forEach(appendCrewData('Vaulted'));
+  
   playerData.player.character.cadet_schedule.missions.forEach(function (mission) {
     result.cadetMissions.push(mission.id);
   });
@@ -154,7 +179,7 @@ function loadCrew(access_token) {
     if (crew.have) {
       crewArray.push([
         crew.name,
-        'Yes',
+        crew.haveState,
         crew.rarity,
         crew.max_rarity,
         crew.level,
@@ -180,21 +205,12 @@ function loadCrew(access_token) {
         crew.traits.join(', ') + ', ' + crew.traits_hidden.join(', ')
       ]);
     } else {
-      if (crew.immortal > 0) {
-        crewArray.push([
-          crew.name,
-          'Vault',
-          crew.max_rarity,
-          crew.max_rarity, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
-        ]);
-      } else {
-        crewArray.push([
-          crew.name,
-          'No',
-          0,
-          crew.max_rarity, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
-        ]);
-      }
+      crewArray.push([
+        crew.name,
+        'No',
+        0,
+        crew.max_rarity, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+      ]);
     }
 
     //var rangeRarity = sheet.getRange(sheet.getLastRow(), 3, 1, 2);
